@@ -1,44 +1,47 @@
 <?php
-// Start the session if not already started and establish a database connection
+// Start the session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-include('db_conn.php');
+
+include('db_conn.php'); // Ensure your DB connection file is included
 
 // Initialize variables
 $firstName = "No user logged in";
-$accNum = null;
+$user_id = null; // Initialize user_id
 
-// Check if the session username and accNum are set
-if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
-    $accNum = $_SESSION['accNum']; // Ensure this variable is set
+// Check if the session account number for guest is set
+if (!empty($_SESSION['guestAccNum'])) {
+    $accNum = $_SESSION['guestAccNum']; 
 
-    // Prepare query to fetch the user's first name
-    $query = "SELECT firstName FROM staff_account WHERE accNum = ?";
-    
-    // Check if the database connection and query preparation are successful
-    if ($stmt = $link->prepare($query)) { 
+    // Fetch user information
+    $query = "SELECT firstName FROM guest_account WHERE accNum = ?";
+    if ($stmt = $link->prepare($query)) {
         $stmt->bind_param("i", $accNum);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        
+        // Execute the statement and get the result
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
 
-        // Fetch user information if available
-        if ($result->num_rows > 0) {
-            $user = $result->fetch_assoc();
-            $firstName = htmlspecialchars($user['firstName']); // Ensure proper escaping
+            // Fetch user information if available
+            if ($result->num_rows > 0) {
+                $user = $result->fetch_assoc();
+                $firstName = htmlspecialchars($user['firstName']);
+                $user_id = $accNum; // Set user_id for profile link
+            } else {
+                $firstName = "Unknown User"; // Handle case where user isn't found
+            }
         } else {
-            $firstName = "Unknown User";
+            $firstName = "Error executing query: " . htmlspecialchars($stmt->error);
         }
 
-        // Close statement
+        // Close the statement
         $stmt->close();
     } else {
-        $firstName = "Error preparing the statement";
+        $firstName = "Error preparing the statement: " . htmlspecialchars($link->error);
     }
 } else {
-    // Redirect to login page if no user is logged in
-    header("Location: login.php");
-    exit;
+    $firstName = "No user logged in"; 
 }
 ?>
 
@@ -71,23 +74,19 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
             <li class="nav-item">
                 <a class="nav-link" href="monitoring.php" id="monitoring-nav">Monitoring</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="reports.php" id="reports-nav">Reports</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="alerts_notifications.php" id="alerts-notifications-nav">Alerts & Notifications</a>
-            </li>
         </ul>
         <ul class="navbar-nav">
             <li class="nav-item dropdown profile">
                 <a href="#" class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <img src="Images/FaMO.png" alt="user-image" class="img-circle img-inline" width="30" height="30">
+                    <img src="Images/Guest.png" alt="user-image" class="img-circle img-inline" width="30" height="30">
                     <span class="ml-2"><?php echo $firstName; ?></span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-                    <a class="dropdown-item" href="profile.php?id=<?php echo (int)$accNum; ?>">
-                        <i class="glyphicon glyphicon-user"></i> Profile
-                    </a>                    
+                    <?php if ($user_id): ?>
+                        <a class="dropdown-item" href="profile.php?id=<?php echo (int)$user_id; ?>">
+                            <i class="glyphicon glyphicon-user"></i> Profile
+                        </a>
+                    <?php endif; ?>
                     <a class="dropdown-item" href="edit_account.php">
                         <i class="glyphicon glyphicon-cog"></i> Settings
                     </a>
@@ -101,5 +100,3 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     </div>
 </nav>
 </header>
-</body>
-</html>

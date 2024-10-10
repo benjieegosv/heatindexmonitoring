@@ -1,40 +1,47 @@
 <?php
-// Start the session if not already started and establish a database connection
+// Start the session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 include('db_conn.php'); // Ensure your DB connection file is included
 
 // Initialize variables
 $firstName = "No user logged in";
+$user_id = null; // Initialize user_id
 
-// Check if the session username is set
-if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
-    $username = $_SESSION['username'];
-    $accNum = $_SESSION['accNum']; // Ensure this variable is set
+// Check if the session account number for admin is set
+if (!empty($_SESSION['adminAccNum'])) {
+    $accNum = $_SESSION['adminAccNum']; // Use admin account number for fetching user info
 
-    // Prepare and execute the SQL query to fetch user information
-    $query = "SELECT firstName FROM staff_account WHERE accNum = ?";
-    if ($stmt = $link->prepare($query)) { // Use $link instead of $conn
+    // Fetch user information
+    $query = "SELECT firstName FROM admin_account WHERE accNum = ?";
+    if ($stmt = $link->prepare($query)) {
         $stmt->bind_param("i", $accNum);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        
+        // Execute the statement and get the result
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
 
-        // Fetch user information if available
-        if ($result->num_rows > 0) {
-            $user = $result->fetch_assoc();
-            $firstName = htmlspecialchars($user['firstName']);
+            // Fetch user information if available
+            if ($result->num_rows > 0) {
+                $user = $result->fetch_assoc();
+                $firstName = htmlspecialchars($user['firstName']);
+                $user_id = $accNum; // Set user_id for profile link
+            } else {
+                $firstName = "Unknown User"; // Handle case where user isn't found
+            }
         } else {
-            $firstName = "Unknown User";
+            $firstName = "Error executing query: " . htmlspecialchars($stmt->error);
         }
 
         // Close the statement
         $stmt->close();
     } else {
-        $firstName = "Error preparing the statement";
+        $firstName = "Error preparing the statement: " . htmlspecialchars($link->error);
     }
 } else {
-    $firstName = "No user logged in";
+    $firstName = "No user logged in"; // Handle case where no admin is logged in
 }
 ?>
 
@@ -46,7 +53,7 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     <title>Weather Dashboard</title>
     <link rel="stylesheet" type="text/css" href="homestyle.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="icon" type="x-icon" href="jagran_logo1.jpg">
+    <link rel="icon" type="image/x-icon" href="Images/PUPIcon.png">
     <link href="https://fonts.googleapis.com/css?family=Quicksand&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
@@ -54,7 +61,7 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
 <header>
 <nav class="navbar sticky-top navbar-expand-sm navbar-dark bg-maroon">
     <a class="navbar-brand" href="home.php">
-        <img src="Images/PUP.png" width="30" height="30" class="d-inline-block align-top" alt="PUP Logo"> PUP Heat Index Monitoring
+        <img src="Images/PUPIcon.png" width="30" height="30" class="d-inline-block align-top" alt="PUP Logo"> PUP Heat Index Monitoring
     </a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -77,13 +84,15 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
         <ul class="navbar-nav">
             <li class="nav-item dropdown profile">
                 <a href="#" class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <img src="Images/FaMO.png" alt="user-image" class="img-circle img-inline" width="30" height="30">
+                    <img src="Images/Admin.png" alt="user-image" class="img-circle img-inline" width="30" height="30">
                     <span class="ml-2"><?php echo $firstName; ?></span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-                    <a class="dropdown-item" href="profile.php?id=<?php echo (int)$user_id; ?>">
-                        <i class="glyphicon glyphicon-user"></i> Profile
-                    </a>
+                    <?php if ($user_id): ?>
+                        <a class="dropdown-item" href="profile.php?id=<?php echo (int)$user_id; ?>">
+                            <i class="glyphicon glyphicon-user"></i> Profile
+                        </a>
+                    <?php endif; ?>
                     <a class="dropdown-item" href="edit_account.php">
                         <i class="glyphicon glyphicon-cog"></i> Settings
                     </a>

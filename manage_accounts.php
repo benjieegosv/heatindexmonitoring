@@ -1,4 +1,18 @@
-<?php include 'header.php'; ?>
+<?php 
+session_start(); // Start the session
+include 'db_conn.php'; 
+include 'header.php';
+
+// Check if user is logged in
+if (!isset($_SESSION['adminAccNum'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Retrieve user information from session
+$user_id = $_SESSION['adminAccNum'];
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

@@ -19,12 +19,11 @@ body {
     justify-content: center;
     height: 100vh;
     overflow: hidden;
-    position: relative;
 }
 
 /* Header */
 .opening-rem {
-    background-color: #800000; /* Maroon */
+    background-color: rgba(128, 0, 0, 0.85); /* Semi-transparent maroon */
     color: #fff;
     padding: 20px;
     width: 90%;
@@ -35,17 +34,14 @@ body {
     left: 50%;
     transform: translateX(-50%);
     border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-    font-size: 1.4em;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    font-size: 1.6em;
     line-height: 1.5;
-    max-height: 15vh; /* Ensures header does not exceed viewport height */
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* Form Containers */
-.form1, .form2, .form.log, .form.reg {
-    position: fixed; /* Changed from absolute to fixed */
+.form1, .form2, .form3, .form.log, .form.reg {
+    position: fixed; 
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -53,12 +49,12 @@ body {
     border-radius: 12px;
     padding: 40px;
     width: 90%;
-    max-width: 500px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    max-width: 450px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     text-align: center;
     max-height: 80vh;
     overflow-y: auto;
-    z-index: 1001; /* Ensures forms are above overlay */
+    z-index: 1001; 
 }
 
 /* Input Field Styling */
@@ -71,12 +67,12 @@ body {
     font-size: 18px;
     color: #333;
     background-color: #f9f9f9;
-    transition: all 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .input:focus {
     border-color: #600000; /* Darker maroon on focus */
-    box-shadow: 0 0 10px rgba(128, 0, 0, 0.3);
+    box-shadow: 0 0 10px rgba(128, 0, 0, 0.5);
     outline: none;
 }
 
@@ -91,17 +87,19 @@ body {
     margin: 15px 0;
     cursor: pointer;
     border-radius: 8px;
-    transition: background-color 0.3s ease, transform 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
     width: 100%;
+    position: relative;
 }
 
 .button:hover {
     background-color: #600000; /* Darker maroon on hover */
-    transform: scale(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .button:active {
-    transform: scale(1.02);
+    transform: translateY(0);
 }
 
 /* Button Container */
@@ -129,7 +127,7 @@ a:hover {
 }
 
 /* Cancel Button Styling */
-#cancel-form2, #cancel-signup, #cancel-login {
+#cancel-form3, #cancel-form2, #cancel-signup, #cancel-login {
     color: #d9534f; /* Red */
     font-size: 16px;
     display: block;
@@ -143,16 +141,16 @@ a:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     display: none;
     z-index: 1000;
-    backdrop-filter: blur(5px);
 }
 
 /* Blur Background Only When Modal is Active */
 body.modal-active .opening-rem,
 body.modal-active .form1,
-body.modal-active .form2 {
+body.modal-active .form2,
+body.modal-active .form3 {
     filter: blur(5px);
 }
 
@@ -167,13 +165,13 @@ body.modal-active .form2 {
     .opening-rem {
         font-size: 1.2em;
         padding: 15px;
-        max-height: 10vh; /* Adjusted to fit smaller screens */
+        max-height: 10vh; 
     }
 
     .form1, .form2, .form.log, .form.reg {
         padding: 20px;
         width: 90%;
-        max-height: 75vh; /* Adjusted to fit smaller screens */
+        max-height: 75vh; 
     }
 
     .input {
@@ -192,13 +190,13 @@ body.modal-active .form2 {
     .opening-rem {
         font-size: 1em;
         padding: 10px;
-        max-height: 8vh; /* Adjusted to fit very small screens */
+        max-height: 8vh; 
     }
 
-    .form1, .form2, .form.log, .form.reg {
+    .form1, .form2, .form3, .form.log, .form.reg {
         padding: 15px;
         width: 95%;
-        max-height: 70vh; /* Adjusted to fit very small screens */
+        max-height: 70vh; 
     }
 
     .input {
@@ -211,4 +209,18 @@ body.modal-active .form2 {
         font-size: 14px;
         margin: 10px 0;
     }
+}
+
+/* Error Message Styling */
+.error-message {
+    color: #d9534f; /* Red */
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+/* Success Message Styling */
+.success-message {
+    color: #5cb85c; /* Green */
+    font-size: 16px;
+    margin-top: 15px;
 }

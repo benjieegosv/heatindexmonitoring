@@ -2,7 +2,7 @@
 
 $host = 'localhost'; 
 $username = 'root'; 
-$password = 'binjixmaria'; 
+$password = '12345678'; 
 $database = 'db_heatindex'; 
 
 // Create connection

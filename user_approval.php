@@ -3,13 +3,60 @@
 include('db_conn.php');
 include('header.php');
 
+// Include PHPMailer classes
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/PHPMailer.php';
+require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/SMTP.php';
+require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/Exception.php';
+
 // Initialize feedback variable
 $feedbackMessage = '';
+
+// Function to send email notification using PHPMailer
+function sendEmailNotification($email, $subject, $message) {
+    $mail = new PHPMailer(true);  // Create a new PHPMailer instance
+
+    try {
+        //Server settings
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';           // Your SMTP host
+        $mail->SMTPAuth = true;
+        $mail->Username = 'kazeynaval0329@gmail.com'; // Your Gmail address
+        $mail->Password = 'htszjykecyxlclhg';        // Your Gmail app password
+        $mail->SMTPSecure = 'tls';
+        $mail->Port = 587;
+
+        //Recipient and email content
+        $mail->setFrom('kazeynaval0329@gmail.com', 'PUP Heat Index Monitoring System');
+        $mail->addAddress($email);  // Add the recipient's email
+
+        //Email subject and body
+        $mail->Subject = $subject;
+        $mail->Body = $message;
+
+        //Send the email
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
 
 // Handle the approval or decline action
 if (isset($_POST['action']) && isset($_POST['staffAccNum'])) {
     $staffAccNum = intval($_POST['staffAccNum']);
     $action = $_POST['action'];
+
+    // Get the user's email based on staffAccNum
+    $sql = "SELECT email FROM staff_account WHERE accNum = ?";
+    $stmt = $link->prepare($sql);
+    $stmt->bind_param("i", $staffAccNum);
+    $stmt->execute();
+    $stmt->bind_result($email);
+    $stmt->fetch();
+    $stmt->close();
 
     if ($action === 'approve') {
         // Approve user
@@ -29,6 +76,16 @@ if (isset($_POST['action']) && isset($_POST['staffAccNum'])) {
 
         $stmt->close();
         $feedbackMessage = "User approved successfully.";
+
+        // Send approval email
+        $subject = "Account Approved";
+        $message = "Congratulations! Your account has been approved.";
+        if (sendEmailNotification($email, $subject, $message)) {
+            $feedbackMessage .= " Email notification sent.";
+        } else {
+            $feedbackMessage .= " Failed to send email notification.";
+        }
+
     } elseif ($action === 'decline') {
         // Remove from validation table first to avoid foreign key constraint issues
         $sql_validation = "DELETE FROM user_validation WHERE staffAccNum = ?";
@@ -64,6 +121,15 @@ if (isset($_POST['action']) && isset($_POST['staffAccNum'])) {
 
         $stmt->close();
         $feedbackMessage = "User declined successfully.";
+
+        // Send rejection email
+        $subject = "Account Declined";
+        $message = "We regret to inform you that your account has been declined.";
+        if (sendEmailNotification($email, $subject, $message)) {
+            $feedbackMessage .= " Email notification sent.";
+        } else {
+            $feedbackMessage .= " Failed to send email notification.";
+        }
     }
 
     // Redirect to refresh the page with feedback message
@@ -194,6 +260,16 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
             color: #6c757d;
         }
     </style>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Approval</title>
+    <style>
+        /* Your existing styles */
+    </style>
 </head>
 <body>
     <?php if ($feedbackMessage): ?>
@@ -246,6 +322,5 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
 </html>
 
 <?php
-
 $link->close();
 ?>
