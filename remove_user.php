@@ -59,7 +59,7 @@ if (isset($_POST['action']) && isset($_POST['staffAccNum'])) {
     exit();
 }
 
-// fetching all staff accounts, with optional search functionality
+// Fetching all staff accounts, with optional search functionality
 $sql = "SELECT u.firstName, u.lastName, u.email, u.accNum 
         FROM staff_account u
         LEFT JOIN user_validation v ON u.accNum = v.staffAccNum 
@@ -253,10 +253,12 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <?php include 'footer.php'; ?>
 </body>
 </html>
 
 <?php
-
 $link->close();
 ?>

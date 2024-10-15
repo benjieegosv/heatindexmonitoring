@@ -19,7 +19,7 @@ if (isset($_POST['reset_password'])) {
     $email = test_input($_POST['email']);
     
     // Check if email exists in the database
-    $query = "SELECT accNum, email FROM staff_account WHERE email = ?";
+    $query = "SELECT accNum, email FROM guest_account WHERE email = ?";
     $stmt = $link->prepare($query);
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -37,7 +37,7 @@ if (isset($_POST['reset_password'])) {
         echo "Expiration time: " . $expTime . "<br>";
 
         // Store token in a 'password_resets' table
-        $query = "INSERT INTO password_resets (accNum, token, expires_at) VALUES (?, ?, ?)";
+        $query = "INSERT INTO password_resets_guest (accNum, token, expires_at) VALUES (?, ?, ?)";
         $stmt = $link->prepare($query);
 
         if ($stmt === false) {
@@ -51,7 +51,7 @@ if (isset($_POST['reset_password'])) {
         }
 
         // Send the reset email using PHPMailer
-        $resetLink = "http://localhost/heatindexmonitoring-main/reset_password.php?token=" . $token;
+        $resetLink = "http://localhost/heatindexmonitoring-main/reset_password_guest.php?token=" . $token;
 
         $mail = new PHPMailer\PHPMailer\PHPMailer();
         try {
@@ -167,7 +167,7 @@ if (isset($_POST['reset_password'])) {
     <p>Enter your email address, and we will send you instructions to reset your password.</p>
     
     <!-- Forgot Password Form -->
-    <form action="forget_password.php" method="POST">
+    <form action="forget_password_guest.php" method="POST">
         <input type="email" name="email" placeholder="Enter your email" required><br>
         <input type="submit" name="reset_password" value="Reset Password"><br>
     </form>

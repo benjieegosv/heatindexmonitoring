@@ -53,6 +53,7 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     <link rel="icon" type="image/x-icon" href="Images/PUPIcon.png">
     <link href="https://fonts.googleapis.com/css?family=Quicksand&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
 <header>
@@ -81,7 +82,7 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
         <ul class="navbar-nav">
             <li class="nav-item dropdown profile">
                 <a href="#" class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <img src="Images/FaMO.png" alt="user-image" class="img-circle img-inline" width="30" height="30">
+                    <img src="Images/Staff.png" alt="user-image" class="img-circle img-inline" width="30" height="30">
                     <span class="ml-2"><?php echo $firstName; ?></span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">

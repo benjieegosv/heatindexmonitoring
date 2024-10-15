@@ -1,6 +1,5 @@
 <?php
 require 'vendor/autoload.php'; // Assuming you are using Composer for PHPMailer
-
 require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/PHPMailer.php';
 require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/SMTP.php';
 require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/Exception.php';
@@ -63,15 +62,6 @@ while ($row = $devicesResult->fetch_assoc()) {
     <link href="https://fonts.googleapis.com/css?family=Quicksand&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
-        body {
-            font-family: 'Quicksand', sans-serif;
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-
         .header-section {
             text-align: center;
             margin-top: 50px;
@@ -489,5 +479,6 @@ while ($row = $devicesResult->fetch_assoc()) {
         <button class="send-suggestion-button" onclick="sendSuggestions()">Send Suggestions</button>
     </div>
 </div>
+<?php include 'footer.php'; ?>
 </body>
 </html>

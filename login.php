@@ -255,7 +255,7 @@ if (isset($_POST['signup'])) {
                 <input class="input" type="text" name="username" placeholder="Username" required><br>
                 <input class="input" type="password" name="password" placeholder="Password" required><br>
                 <input class="button" type="submit" name="login" value="Login"><br>
-                <a href="#" id="staff-login-signup">Sign Up here</a> | <a href="#">Forgot Password?</a><br>
+                <a href="#" id="staff-login-signup">Sign Up here</a> | <a href="forget_password.php">Forgot Password?</a><br>
                 <a href="#" id="cancel-staff-login">Cancel</a>
             </form>
         </div>
@@ -310,7 +310,7 @@ if (isset($_POST['signup'])) {
                 <input class="input" type="text" name="username" placeholder="Username" required><br>
                 <input class="input" type="password" name="password" placeholder="Password" required><br>
                 <input class="button" type="submit" name="login" value="Login"><br>
-                <a href="#" id="guest-login-signup">Sign Up here</a> | <a href="#">Forgot Password?</a><br>
+                <a href="#" id="guest-login-signup">Sign Up here</a> | <a href="forget_password_guest.php">Forgot Password?</a><br>
                 <a href="#" id="cancel-guest-login">Cancel</a>
             </form>
         </div>

@@ -1,196 +1,239 @@
 <?php
-require 'vendor/autoload.php'; // Load PhpSpreadsheet and TCPDF
-include 'db_conn.php'; // Include database connection
+// Include database connection
+include 'db_conn.php';
+require 'vendor/autoload.php'; // Include PhpSpreadsheet and TCPDF
 
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-
-// Retrieve the year from GET parameters
-if (!isset($_GET['year'])) {
-    echo "Year is not specified.";
-    exit();
+// Only start session if none exists
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-$year = htmlspecialchars($_GET['year']); // Retrieve the year for the report
+// Get the download format, month, and year from the request
+$format = $_GET['download'];
+$selectedMonth = $_GET['month'];
+$selectedYear = $_GET['year'];
+$monthName = date('F', mktime(0, 0, 0, $selectedMonth, 1)); // Get month name
+$filename = "monthly_report_{$monthName}_{$selectedYear}"; // Use month name in file name
 
-// Determine the requested file format (default is CSV)
-$format = $_GET['download'] ?? 'csv';
-
-// Query the database to get the monthly data
-$query = "
-    SELECT 
-        MONTH(date) AS month, 
-        MIN(temperature) AS min_temperature, 
-        MAX(temperature) AS max_temperature,
-        MIN(humidity) AS min_humidity,
-        MAX(humidity) AS max_humidity,
-        MIN(heatIndex) AS min_heat_index,
-        MAX(heatIndex) AS max_heat_index,
-        AVG(temperature) AS avg_temperature,
-        AVG(humidity) AS avg_humidity,
-        AVG(heatIndex) AS avg_heat_index
-    FROM external_heat_index_data
-    WHERE YEAR(date) = ?
-    GROUP BY MONTH(date)
-    ORDER BY MONTH(date)";
-
-// Prepare the statement
-$stmt = $link->prepare($query);
-$stmt->bind_param('s', $year);
-$stmt->execute();
-$result = $stmt->get_result();
-
-// Check if data was found
-if ($result->num_rows === 0) {
-    echo "No data available for the selected year.";
-    exit();
+// Ensure the report name is within the allowed length (50 characters)
+$reportName = "Monthly Report for {$monthName}/{$selectedYear}";
+if (strlen($reportName) > 50) {
+    $reportName = substr($reportName, 0, 50);  // Truncate if the report name exceeds the limit
 }
 
-// Prepare the data from the result
-$data_to_export = [];
-while ($row = $result->fetch_assoc()) {
-    $monthNumber = (int)$row['month'];
-    $data_to_export[] = [
-        'month' => date('F', mktime(0, 0, 0, $monthNumber, 1)), // Convert month number to month name
-        'min_temperature' => number_format($row['min_temperature'], 2),
-        'max_temperature' => number_format($row['max_temperature'], 2),
-        'min_humidity' => number_format($row['min_humidity'], 2),
-        'max_humidity' => number_format($row['max_humidity'], 2),
-        'min_heat_index' => number_format($row['min_heat_index'], 2),
-        'max_heat_index' => number_format($row['max_heat_index'], 2),
-        'avg_temperature' => number_format($row['avg_temperature'], 2),
-        'avg_humidity' => number_format($row['avg_humidity'], 2),
-        'avg_heat_index' => number_format($row['avg_heat_index'], 2)
-    ];
-}
-
-// Define headers for the report
-$headers = ['Month', 'Min Temperature (°C)', 'Max Temperature (°C)', 'Min Humidity (%)', 'Max Humidity (%)', 'Min Heat Index', 'Max Heat Index', 'Average Temperature (°C)', 'Average Humidity (%)', 'Average Heat Index'];
-
-// Define the directory to save the file (adjust the path accordingly)
+// Directory to save the file (adjust the path accordingly)
 $saveDirectory = 'C:/xampp/htdocs/heatindexmonitoring-main/ReportMonthly/';
-$filename = "monthly_report_{$year}_" . date('Y-m-d');
+$filePath = ''; // This will store the full path to the saved file
 
-// Generate a report name (up to 50 characters)
-$reportName = "Monthly Report for {$year}";
-
-// Prepare the "generated_by" field
+// Prepare the SQL query for insertion later (we will update this after generating the file)
 $generatedBy = ''; // This will store the user's full name (admin or staff)
+$reportType = 'monthly'; // Hardcoded report type, but it can now be up to 50 characters
 
 // Determine the user (admin or staff) who generated the report
 if (isset($_SESSION['adminAccNum'])) {
     // Fetch admin details
     $adminQuery = "SELECT firstName, lastName FROM admin_account WHERE accNum = ?";
-    $stmtUser = $link->prepare($adminQuery);
-    $stmtUser->bind_param("i", $_SESSION['adminAccNum']);
-    $stmtUser->execute();
-    $adminResult = $stmtUser->get_result();
+    $stmt = $link->prepare($adminQuery);
+    $stmt->bind_param("i", $_SESSION['adminAccNum']);
+    $stmt->execute();
+    $adminResult = $stmt->get_result();
     if ($adminRow = $adminResult->fetch_assoc()) {
         $generatedBy = $adminRow['firstName'] . ' ' . $adminRow['lastName'];
     }
 } elseif (isset($_SESSION['accNum'])) {
     // Fetch staff details
     $staffQuery = "SELECT firstName, lastName FROM staff_account WHERE accNum = ?";
-    $stmtUser = $link->prepare($staffQuery);
-    $stmtUser->bind_param("i", $_SESSION['accNum']);
-    $stmtUser->execute();
-    $staffResult = $stmtUser->get_result();
+    $stmt = $link->prepare($staffQuery);
+    $stmt->bind_param("i", $_SESSION['accNum']);
+    $stmt->execute();
+    $staffResult = $stmt->get_result();
     if ($staffRow = $staffResult->fetch_assoc()) {
         $generatedBy = $staffRow['firstName'] . ' ' . $staffRow['lastName'];
     }
 }
 
-// Proceed to generate the report based on the format (CSV, Excel, PDF)
-if ($format === 'csv') {
-    $filePath = $saveDirectory . $filename . '.csv';
-    
-    // Save the CSV file to the specified directory
-    $output = fopen($filePath, 'w');
-    fputcsv($output, $headers); // Write headers to the CSV file
-    foreach ($data_to_export as $row) {
-        fputcsv($output, $row); // Write each row of data to the CSV
-    }
-    fclose($output);
-    
-    // Now serve the file for download
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
-    readfile($filePath); // Serve the file
-}
+// Fetch summary data for the selected month and year
+$summaryQuery = "
+    SELECT 
+        MAX(temperature) AS max_temperature, 
+        MIN(temperature) AS min_temperature, 
+        AVG(temperature) AS avg_temperature,
+        MAX(humidity) AS max_humidity, 
+        MIN(humidity) AS min_humidity, 
+        AVG(humidity) AS avg_humidity,
+        MAX(heatIndex) AS max_heat_index, 
+        MIN(heatIndex) AS min_heat_index, 
+        AVG(heatIndex) AS avg_heat_index
+    FROM external_heat_index_data
+    WHERE MONTH(date) = ? AND YEAR(date) = ?";
 
-// Generate Excel file
-if ($format === 'excel') {
-    $spreadsheet = new Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
+$stmt = $link->prepare($summaryQuery);
+$stmt->bind_param('ii', $selectedMonth, $selectedYear);
+$stmt->execute();
+$summary_result = $stmt->get_result();
+$summary = $summary_result->fetch_assoc();
 
-    // Set headers in Excel sheet
-    $sheet->fromArray($headers, NULL, 'A1');
+// Fetch individual records for the detailed table
+$dataQuery = "
+    SELECT 
+        DAY(date) AS day, 
+        location, 
+        temperature, 
+        humidity, 
+        heatIndex 
+    FROM external_heat_index_data 
+    WHERE MONTH(date) = ? AND YEAR(date) = ?
+    ORDER BY date ASC";
 
-    // Populate rows with data
-    $rowCount = 2;
-    foreach ($data_to_export as $row) {
-        $sheet->fromArray(array_values($row), NULL, 'A' . $rowCount);
-        $rowCount++;
-    }
+$stmt = $link->prepare($dataQuery);
+$stmt->bind_param('ii', $selectedMonth, $selectedYear);
+$stmt->execute();
+$data_result = $stmt->get_result();
 
-    // Save the Excel file to the specified directory
-    $filePath = $saveDirectory . $filename . '.xlsx';
-    $writer = new Xlsx($spreadsheet);
-    $writer->save($filePath);
+// Switch case to handle different download formats
+switch ($format) {
+    case 'csv':
+        $filePath = $saveDirectory . $filename . '.csv'; // Path where the file will be saved
+        $output = fopen($filePath, 'w'); // Save the file to the specified path
 
-    // Now serve the file for download
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
-    readfile($filePath); // Serve the file
-}
+        // Add summary table headers and values
+        fputcsv($output, ['Metric', 'Max', 'Average', 'Min']);
+        fputcsv($output, ['Temperature (°C)', $summary['max_temperature'], number_format($summary['avg_temperature'], 2), $summary['min_temperature']]);
+        fputcsv($output, ['Humidity (%)', $summary['max_humidity'], number_format($summary['avg_humidity'], 2), $summary['min_humidity']]);
+        fputcsv($output, ['Heat Index (°C)', $summary['max_heat_index'], number_format($summary['avg_heat_index'], 2), $summary['min_heat_index']]);
+        fputcsv($output, []); // Blank row for separation
 
-// Generate PDF file
-if ($format === 'pdf') {
-    ob_clean(); // Clean output buffer
-
-    // Initialize TCPDF directly without the "use" statement
-    $pdf = new TCPDF();
-    $pdf->AddPage();
-    $pdf->SetFont('helvetica', '', 12);
-
-    // Create HTML content for the PDF, with the year in the title
-    $html = "<h2>Monthly Monitoring Report for $year</h2>"; // Add the year in the title
-    $html .= '<table border="1" cellpadding="4">';
-    $html .= '<thead><tr>';
-    foreach ($headers as $header) {
-        $html .= "<th>$header</th>";
-    }
-    $html .= '</tr></thead><tbody>';
-
-    // Populate the table with data
-    foreach ($data_to_export as $row) {
-        $html .= '<tr>';
-        foreach ($row as $value) {
-            $html .= "<td>$value</td>";
+        // Add observation table headers and values
+        fputcsv($output, ['Day', 'Location', 'Temperature (°C)', 'Humidity (%)', 'Heat Index (°C)']);
+        while ($row = $data_result->fetch_assoc()) {
+            fputcsv($output, [
+                $row['day'],
+                $row['location'],
+                number_format($row['temperature'], 2),
+                number_format($row['humidity'], 2),
+                number_format($row['heatIndex'], 2)
+            ]);
         }
-        $html .= '</tr>';
-    }
-    $html .= '</tbody></table>';
+        fclose($output);
 
-    // Write the HTML to the PDF
-    $pdf->writeHTML($html, true, false, true, false, '');
+        // Now force the file to download from the saved location
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="' . $filename . '.csv"');
+        readfile($filePath); // Serve the saved file for download
+        break;
 
-    // Save the PDF file to the specified directory
-    $filePath = $saveDirectory . $filename . '.pdf';
-    $pdf->Output($filePath, 'F'); // Save the PDF
+    case 'excel':
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-    // Now serve the file for download
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
-    readfile($filePath); // Serve the file
+        // Add summary table headers and values
+        $sheet->fromArray(['Metric', 'Max', 'Average', 'Min'], NULL, 'A1');
+        $sheet->fromArray(['Temperature (°C)', $summary['max_temperature'], number_format($summary['avg_temperature'], 2), $summary['min_temperature']], NULL, 'A2');
+        $sheet->fromArray(['Humidity (%)', $summary['max_humidity'], number_format($summary['avg_humidity'], 2), $summary['min_humidity']], NULL, 'A3');
+        $sheet->fromArray(['Heat Index (°C)', $summary['max_heat_index'], number_format($summary['avg_heat_index'], 2), $summary['min_heat_index']], NULL, 'A4');
+        
+        // Start the observation data after a blank row
+        $sheet->fromArray(['Day', 'Location', 'Temperature (°C)', 'Humidity (%)', 'Heat Index (°C)'], NULL, 'A6');
+        $rowCount = 7; // Start from row 7 for observation table
+        while ($row = $data_result->fetch_assoc()) {
+            $sheet->fromArray([
+                $row['day'],
+                $row['location'],
+                number_format($row['temperature'], 2),
+                number_format($row['humidity'], 2),
+                number_format($row['heatIndex'], 2)
+            ], NULL, 'A' . $rowCount);
+            $rowCount++;
+        }
+
+        $filePath = $saveDirectory . $filename . '.xlsx'; // Path where the file will be saved
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($filePath); // Save the Excel file to the specified path
+
+        // Now force the file to download from the saved location
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '.xlsx"');
+        readfile($filePath); // Serve the saved file for download
+        break;
+
+    case 'pdf':
+        $pdf = new TCPDF();
+        $pdf->AddPage();
+
+        // Add summary table to the PDF
+        $html = '<h1>Monthly Report for ' . htmlspecialchars($monthName) . '/' . htmlspecialchars($selectedYear) . '</h1>';
+        $html .= '<h2>Summary of Report</h2>';
+        $html .= '<table border="1" cellspacing="0" cellpadding="4">';
+        $html .= '<thead><tr><th>Metric</th><th>Max</th><th>Average</th><th>Min</th></tr></thead>';
+        $html .= '<tbody>';
+
+        // For Temperature
+        $html .= sprintf(
+            '<tr><td>Temperature (°C)</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+            floatval($summary['max_temperature']),
+            floatval($summary['avg_temperature']),
+            floatval($summary['min_temperature'])
+        );
+
+        // For Humidity
+        $html .= sprintf(
+            '<tr><td>Humidity (%%)</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+            floatval($summary['max_humidity']),
+            floatval($summary['avg_humidity']),
+            floatval($summary['min_humidity'])
+        );
+
+        // For Heat Index
+        $html .= sprintf(
+            '<tr><td>Heat Index (°C)</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+            floatval($summary['max_heat_index']),
+            floatval($summary['avg_heat_index']),
+            floatval($summary['min_heat_index'])
+        );
+
+        $html .= '</tbody></table><br>';
+
+        // Add observation table to the PDF
+        $html .= '<h2>Observations</h2>';
+        $html .= '<table border="1" cellspacing="0" cellpadding="4">';
+        $html .= '<thead><tr><th>Day</th><th>Location</th><th>Temperature</th><th>Humidity</th><th>Heat Index</th></tr></thead><tbody>';
+        
+        // Re-fetch the data as it might have been consumed by previous formats
+        $stmt = $link->prepare($dataQuery);
+        $stmt->bind_param('ii', $selectedMonth, $selectedYear);
+        $stmt->execute();
+        $data_result = $stmt->get_result();
+        
+        while ($row = $data_result->fetch_assoc()) {
+            $html .= sprintf(
+                '<tr><td>%s</td><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+                htmlspecialchars($row['day']),
+                htmlspecialchars($row['location']),
+                floatval($row['temperature']),
+                floatval($row['humidity']),
+                floatval($row['heatIndex'])
+            );
+        }
+        $html .= '</tbody></table>';
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        $filePath = $saveDirectory . $filename . '.pdf'; // Path where the file will be saved
+        $pdf->Output($filePath, 'F'); // Save the PDF file to the specified path
+
+        // Now force the file to download from the saved location
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '.pdf"');
+        readfile($filePath); // Serve the saved file for download
+        break;
 }
 
 // Save report details into the report_files table after the report is generated
 if ($filePath !== '') {
-    $stmtInsert = $link->prepare("INSERT INTO report_files (report_name, report_type, file_path, file_format, generated_by) VALUES (?, ?, ?, ?, ?)");
-    $reportType = "monthly"; // Hardcoded as "monthly" for this report type
-    $stmtInsert->bind_param("sssss", $reportName, $reportType, $filePath, $format, $generatedBy);
-    $stmtInsert->execute();
+    // Insert the report details including the report name (limited to 50 characters)
+    $stmt = $link->prepare("INSERT INTO report_files (report_name, report_type, file_path, file_format, generated_by) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $reportName, $reportType, $filePath, $format, $generatedBy);
+    $stmt->execute();
 }
 
 exit();
+?>

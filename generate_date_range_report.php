@@ -1,6 +1,12 @@
 <?php
 // Include database connection
 include 'db_conn.php'; 
+require 'vendor/autoload.php'; // PhpSpreadsheet and TCPDF
+
+// Only start session if none exists
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Get the download format, start and end date from the request
 $format = $_GET['download'];
@@ -45,18 +51,58 @@ if (isset($_SESSION['adminAccNum'])) {
     }
 }
 
+// Fetch data for the summary table
+$summaryQuery = "
+    SELECT 
+        MAX(temperature) AS max_temperature, 
+        MIN(temperature) AS min_temperature, 
+        AVG(temperature) AS avg_temperature,
+        MAX(humidity) AS max_humidity, 
+        MIN(humidity) AS min_humidity, 
+        AVG(humidity) AS avg_humidity,
+        MAX(heatIndex) AS max_heat_index, 
+        MIN(heatIndex) AS min_heat_index, 
+        AVG(heatIndex) AS avg_heat_index
+    FROM external_heat_index_data
+    WHERE date BETWEEN ? AND ?";
+$stmt = $link->prepare($summaryQuery);
+$stmt->bind_param('ss', $start_date, $end_date);
+$stmt->execute();
+$summary_result = $stmt->get_result();
+$summary = $summary_result->fetch_assoc();
+
+// Fetch data for the observation table
+$query = "
+    SELECT location, temperature, humidity, heatIndex, DATE_FORMAT(date, '%Y-%m-%d') AS formatted_date
+    FROM external_heat_index_data
+    WHERE date BETWEEN ? AND ?
+    ORDER BY date ASC";
+$stmt = $link->prepare($query);
+$stmt->bind_param('ss', $start_date, $end_date);
+$stmt->execute();
+$result = $stmt->get_result();
+
 // Switch case to handle different download formats
 switch ($format) {
     case 'csv':
         $filePath = $saveDirectory . $filename . '.csv'; // Path where the file will be saved
         $output = fopen($filePath, 'w'); // Save the file to the specified path
+
+        // Add summary table headers and values
+        fputcsv($output, ['Metric', 'Max', 'Average', 'Min']);
+        fputcsv($output, ['Temperature (°C)', $summary['max_temperature'], number_format($summary['avg_temperature'], 2), $summary['min_temperature']]);
+        fputcsv($output, ['Humidity (%)', $summary['max_humidity'], number_format($summary['avg_humidity'], 2), $summary['min_humidity']]);
+        fputcsv($output, ['Heat Index (°C)', $summary['max_heat_index'], number_format($summary['avg_heat_index'], 2), $summary['min_heat_index']]);
+        fputcsv($output, []); // Blank row for separation
+
+        // Add observation table headers and values
         fputcsv($output, ['Location', 'Temperature', 'Humidity', 'Heat Index', 'Date']);
-        foreach ($result as $row) {
+        while ($row = $result->fetch_assoc()) {
             fputcsv($output, [
                 $row['location'],
-                $row['temperature'],
-                $row['humidity'],
-                $row['heatIndex'],
+                number_format($row['temperature'], 2),
+                number_format($row['humidity'], 2),
+                number_format($row['heatIndex'], 2),
                 $row['formatted_date']
             ]);
         }
@@ -71,14 +117,22 @@ switch ($format) {
     case 'excel':
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->fromArray(['Location', 'Temperature', 'Humidity', 'Heat Index', 'Date'], NULL, 'A1');
-        $rowCount = 2; // Start from the second row because the first row is for headers
-        foreach ($result as $row) {
+
+        // Add summary table headers and values
+        $sheet->fromArray(['Metric', 'Max', 'Average', 'Min'], NULL, 'A1');
+        $sheet->fromArray(['Temperature (°C)', $summary['max_temperature'], number_format($summary['avg_temperature'], 2), $summary['min_temperature']], NULL, 'A2');
+        $sheet->fromArray(['Humidity (%)', $summary['max_humidity'], number_format($summary['avg_humidity'], 2), $summary['min_humidity']], NULL, 'A3');
+        $sheet->fromArray(['Heat Index (°C)', $summary['max_heat_index'], number_format($summary['avg_heat_index'], 2), $summary['min_heat_index']], NULL, 'A4');
+        
+        // Start the observation data after a blank row
+        $sheet->fromArray(['Location', 'Temperature', 'Humidity', 'Heat Index', 'Date'], NULL, 'A6');
+        $rowCount = 7; // Start from row 7 for observation table
+        while ($row = $result->fetch_assoc()) {
             $sheet->fromArray([
                 $row['location'],
-                $row['temperature'],
-                $row['humidity'],
-                $row['heatIndex'],
+                number_format($row['temperature'], 2),
+                number_format($row['humidity'], 2),
+                number_format($row['heatIndex'], 2),
                 $row['formatted_date']
             ], NULL, 'A' . $rowCount);
             $rowCount++;
@@ -97,16 +151,57 @@ switch ($format) {
     case 'pdf':
         $pdf = new TCPDF();
         $pdf->AddPage();
-        $html = '<h1>Monitoring Report from ' . htmlspecialchars($start_date) . ' to ' . htmlspecialchars($end_date) . '</h1>'
-              . '<table border="1" cellspacing="0" cellpadding="4">'
-              . '<thead><tr><th>Location</th><th>Temperature</th><th>Humidity</th><th>Heat Index</th><th>Date</th></tr></thead><tbody>';
-        foreach ($result as $row) {
+
+        // Add summary table to the PDF
+        $html = '<h1>Monitoring Report from ' . htmlspecialchars($start_date) . ' to ' . htmlspecialchars($end_date) . '</h1>';
+        $html .= '<h2>Summary of Report</h2>';
+        $html .= '<table border="1" cellspacing="0" cellpadding="4">';
+        $html .= '<thead><tr><th>Metric</th><th>Max</th><th>Average</th><th>Min</th></tr></thead>';
+        $html .= '<tbody>';
+
+        // For Temperature
+        $html .= sprintf(
+            '<tr><td>Temperature (°C)</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+            floatval($summary['max_temperature']),
+            floatval($summary['avg_temperature']),
+            floatval($summary['min_temperature'])
+        );
+
+        // For Humidity
+        $html .= sprintf(
+            '<tr><td>Humidity (%%)</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+            floatval($summary['max_humidity']),
+            floatval($summary['avg_humidity']),
+            floatval($summary['min_humidity'])
+        );
+
+        // For Heat Index
+        $html .= sprintf(
+            '<tr><td>Heat Index (°C)</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>',
+            floatval($summary['max_heat_index']),
+            floatval($summary['avg_heat_index']),
+            floatval($summary['min_heat_index'])
+        );
+
+        $html .= '</tbody></table><br>';
+
+
+        // Add observation table to the PDF
+        $html .= '<h2>Observations</h2>';
+        $html .= '<table border="1" cellspacing="0" cellpadding="4">';
+        $html .= '<thead><tr><th>Location</th><th>Temperature</th><th>Humidity</th><th>Heat Index</th><th>Date</th></tr></thead><tbody>';
+        
+        // Re-fetch the data as it might have been consumed by previous formats
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
             $html .= sprintf(
-                '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+                '<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%s</td></tr>',
                 htmlspecialchars($row['location']),
-                htmlspecialchars($row['temperature']),
-                htmlspecialchars($row['humidity']),
-                htmlspecialchars($row['heatIndex']),
+                floatval($row['temperature']),
+                floatval($row['humidity']),
+                floatval($row['heatIndex']),
                 htmlspecialchars($row['formatted_date'])
             );
         }

@@ -208,6 +208,7 @@ if ($result === false) {
             <p>No reports found.</p>
         <?php endif; ?>
     </div>
+    <?php include 'footer.php'; ?>
 </body>
 </html>
 

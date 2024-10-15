@@ -73,5 +73,6 @@ $user_id = $_SESSION['adminAccNum'];
             window.location.href = 'remove_user.php'; // Redirect to the remove user page
         });
     </script>
+    <?php include 'footer.php'; ?>
 </body>
 </html>

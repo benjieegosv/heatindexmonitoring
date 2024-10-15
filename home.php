@@ -90,5 +90,6 @@ $link->close();
         document.getElementById('compare-section').style.display = 'none';
     });
     </script>
+    <?php include 'footer.php'; ?>
 </body>
 </html>

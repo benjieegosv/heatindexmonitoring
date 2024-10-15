@@ -1,0 +1,275 @@
+-- Create Admin Account table
+CREATE TABLE admin_account (
+    accNum INT AUTO_INCREMENT PRIMARY KEY,
+    firstName VARCHAR(50) NOT NULL,
+    lastName VARCHAR(50) NOT NULL,
+    profilePic LONGBLOB,
+    email VARCHAR(100) NOT NULL UNIQUE, 
+    contactNum VARCHAR(11),
+    username VARCHAR(50) NOT NULL UNIQUE, 
+    password VARCHAR(255) NOT NULL,
+    dateCreated DATE,
+    timeCreated TIME
+);
+
+-- Create Staff Account table
+CREATE TABLE staff_account (
+    accNum INT AUTO_INCREMENT PRIMARY KEY,
+    firstName VARCHAR(50) NOT NULL,
+    lastName VARCHAR(50) NOT NULL,
+    profilePic LONGBLOB,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    contactNum VARCHAR(11),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    dateCreated DATE,
+    timeCreated TIME
+);
+
+-- Create Guest Account table
+CREATE TABLE guest_account (
+    accNum INT AUTO_INCREMENT PRIMARY KEY,
+    firstName VARCHAR(50) NOT NULL,
+    lastName VARCHAR(50) NOT NULL,
+    profilePic LONGBLOB,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    contactNum VARCHAR(11),
+    username VARCHAR(50) NOT NULL UNIQUE, 
+    password VARCHAR(255) NOT NULL,
+    dateCreated DATE,
+    timeCreated TIME
+);
+
+-- Create User Validation table
+CREATE TABLE user_validation (
+    validationId INT AUTO_INCREMENT PRIMARY KEY,
+    staffAccNum INT NOT NULL,
+    approvalStatus BOOLEAN NOT NULL,
+    approvalTimestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    FOREIGN KEY (staffAccNum) REFERENCES staff_account(accNum)
+);
+
+-- Create Device Info table
+CREATE TABLE device_info (
+    deviceId INT AUTO_INCREMENT PRIMARY KEY,
+    deviceName VARCHAR(100) NOT NULL,
+    deviceDescription TEXT,
+    location VARCHAR(50) NOT NULL
+);
+
+-- Create Monitoring table
+CREATE TABLE monitoring (
+    monitoringId INT AUTO_INCREMENT PRIMARY KEY,
+    deviceId INT NOT NULL,
+    temperature DECIMAL(5,2) NOT NULL,
+    humidity DECIMAL(5,2) NOT NULL,
+    heatIndex DECIMAL(5,2) NOT NULL,
+    timeAndDate DATETIME NOT NULL,
+    FOREIGN KEY (deviceId) REFERENCES device_info(deviceId)
+);
+
+-- Create Reports table
+CREATE TABLE report_files (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_type VARCHAR(255) NOT NULL,     
+    file_path VARCHAR(255) NOT NULL,      
+    file_format VARCHAR(50) NOT NULL,       
+    generated_by VARCHAR(100) NOT NULL,     
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    UNIQUE KEY unique_report (file_path, file_format) 
+);
+
+-- Create Forecast data table
+CREATE TABLE forecast_data (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATE NOT NULL,
+    temperature_forecast FLOAT NOT NULL,
+    humidity_forecast FLOAT NOT NULL,
+    heat_index_forecast FLOAT NOT NULL,
+    location VARCHAR(50) NOT NULL
+);
+
+
+-- Create Heat Index Levels table
+CREATE TABLE heat_index_levels (
+    heatIndexLevelId INT AUTO_INCREMENT PRIMARY KEY,
+    heatIndexLevel VARCHAR(50) NOT NULL,
+    classification VARCHAR(50),
+    suggestion TEXT,
+    description TEXT
+);
+
+-- Create Alerts and Notifications table
+CREATE TABLE alerts_notifications (
+    alertId INT AUTO_INCREMENT PRIMARY KEY,
+    monitoringId INT NOT NULL,
+    staffAccNum INT NOT NULL,
+    heatIndexLevelId INT NOT NULL,
+    FOREIGN KEY (monitoringId) REFERENCES monitoring(monitoringId),
+    FOREIGN KEY (staffAccNum) REFERENCES staff_account(accNum),
+    FOREIGN KEY (heatIndexLevelId) REFERENCES heat_index_levels(heatIndexLevelId)
+);
+
+-- Create External Heat Index Data table
+CREATE TABLE external_heat_index_data (
+    dataId INT AUTO_INCREMENT PRIMARY KEY,
+    location VARCHAR(20) NOT NULL,
+    date DATE NOT NULL,
+    temperature float NOT NULL,
+    humidity float NOT NULL,
+    heatIndex float NOT NULL,
+    source VARCHAR(20) NOT NULL
+);
+
+----------------------------------------
+
+@startuml
+
+' Define the Admin Account class
+class AdminAccount {
+    ----
+    +int accNum
+    +String firstName
+    +String lastName
+    +String email
+    +String username
+    +String password
+
+    ----
+    +getAdminAccountDetails()
+    +updateAdminAccount()
+    +deleteAdminAccount()
+}
+
+' Define the Staff Account class
+class StaffAccount {
+    ----
+    +int accNum
+    +String firstName
+    +String lastName
+    +String email
+    +String username
+    +String password
+
+    ----
+    +createStaffAccount()
+    +getStaffAccountDetails()
+    +updateStaffAccount()
+    +deleteStaffAccount()
+}
+
+' Define the User Validation class
+class UserValidation {
+    ----
+    +int validationId
+    +boolean approvalStatus
+    +Timestamp approvalTimestamp
+    +int adminAccNum
+    +int staffAccNum
+
+    ----
+    +validateUser()
+}
+
+' Define the Device Info class
+class DeviceInfo {
+    ----
+    +int deviceId
+    +String deviceName
+    +String deviceDescription
+    +String location
+
+    ----
+    +getDeviceDetails()
+}
+
+' Define the Monitoring class
+class Monitoring {
+    ----
+    +int monitoringId
+    +decimal(5,2) temperature
+    +decimal(5,2) humidity
+    +decimal(5,2) heatIndex
+    +Datetime timeAndDate
+    +int deviceId
+
+    ----
+    +getMonitoringData()
+}
+
+' Define the Reports class
+class Reports {
+    ----
+    +int reportId
+    +String reportName
+    +decimal(5,2) avgTemperature
+    +decimal(5,2) avgHumidity
+    +decimal(5,2) avgHeatIndex
+    +Datetime startDate
+    +Datetime endDate
+    +Datetime dateCreated
+    +int monitoringId
+    +int staffAccNum
+
+    ----
+    +generateReport()
+    +getReport()
+    +deleteReport()
+}
+
+' Define the Heat Index Levels class
+class HeatIndexLevels {
+    ----
+    +int heatIndexLevelId
+    +String heatIndexLevel
+    +String classification
+    +String suggestion
+    +String description
+
+    ----
+    +getHeatIndexLevel()
+}
+
+' Define the Alerts and Notifications class
+class AlertsNotifications {
+    ----
+    +int alertId
+    +int monitoringId
+    +int staffAccNum
+    +int heatIndexLevelId
+
+    ----
+    +createAlert()
+    +getAlertDetails()
+    +sendNotification()
+}
+
+' Define the External Heat Index Data class
+class ExternalHeatIndexData {
+    ----
+    +int dataId
+    +String location
+    +Datetime timestamp
+    +decimal(10,2) heatIndex
+    +decimal(10,2) humidity
+    +decimal(10,2) temperature
+    +String source
+
+    ----
+    +fetchExternalData()
+    +getExternalData()
+}
+
+' Define relationships between classes with direction arrows
+AdminAccount "" --> "" UserValidation
+StaffAccount "" --> "" UserValidation
+DeviceInfo "" --> "" Monitoring
+Monitoring "" --> "" Reports
+StaffAccount "" --> "" Reports
+Monitoring "" --> "" AlertsNotifications
+StaffAccount "" --> "" AlertsNotifications
+HeatIndexLevels "" --> "" AlertsNotifications
+
+@enduml
+
+

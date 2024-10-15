@@ -125,5 +125,6 @@ $link->close();
             window.location.href = 'generate_reports.php'; //
         });
     </script>
+    <?php include 'footer.php'; ?>
 </body>
 </html>

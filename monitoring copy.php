@@ -103,63 +103,27 @@ if ($deviceResult && $deviceResult->num_rows > 0) {
     while ($row = $deviceResult->fetch_assoc()) {
         $devices[] = $row;
     }
-} else {
-    echo "No devices found.";
 }
 
 // Fetch today's date
 $today = new DateTime();
 $todayFormatted = $today->format('Y-m-d');
 
-// Check if it's midnight (12:00 AM) or later
-$currentHour = date('H');
-
-// Check the last weather data date from the external_heat_index_data table
+// Check the last stored date from the external_heat_index_data table
 $sql = "SELECT date FROM external_heat_index_data ORDER BY date DESC LIMIT 1";
 $result = $link->query($sql);
-$lastWeatherDate = null;
+$lastStoredDate = null;
 
 if ($result && $result->num_rows > 0) {
     $row = $result->fetch_assoc();
-    $lastWeatherDate = $row['date'];
+    $lastStoredDate = $row['date'];
+} else {
+    echo "No previous data found.<br>";
 }
 
-// Fetch the last forecast date from the forecast_data table
-$sql = "SELECT date FROM forecast_data ORDER BY date DESC LIMIT 1";
-$result = $link->query($sql);
-$lastForecastDate = null;
-
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $lastForecastDate = $row['date'];
-}
-
-// If it's midnight or later and the last weather date is not today, fetch weather data
-if ($currentHour === '00' || ($currentHour > '00' && $lastWeatherDate !== $todayFormatted)) {
-    // Fetch the latest weather data from Visual Crossing
+// If today's date is different from the last stored date, fetch and store new weather data
+if ($lastStoredDate !== $todayFormatted) {
     fetchAndStoreWeatherData($link);
-
-    // Truncate the existing forecast data
-    $link->query("TRUNCATE TABLE forecast_data");
-
-    // Run the Python script for forecasting
-    $forecastDataRaw = shell_exec('C:/Python312/python.exe /xampp/htdocs/heatindexmonitoring-main/forecast.py 2>&1');
-
-    // Decode the JSON output from the Python script
-    $forecastData = json_decode($forecastDataRaw, true);
-
-    // Save the forecast data to the database
-    foreach ($forecastData as $data) {
-        $insertQuery = "
-            INSERT INTO forecast_data (date, temperature_forecast, humidity_forecast, heat_index_forecast, location) 
-            VALUES (?, ?, ?, ?, ?)
-        ";
-        $stmt = $link->prepare($insertQuery);
-        $stmt->bind_param("ssdds", $data['date'], $data['temperature_forecast'], $data['humidity_forecast'], $data['heat_index_forecast'], $data['location']);
-        if (!$stmt->execute()) {
-            echo 'Error storing forecast data: ' . htmlspecialchars($stmt->error);
-        }
-    }
 }
 
 // Fetch the latest monitoring data and device location from the database
@@ -175,28 +139,21 @@ $currentData = null;
 
 if ($result && $result->num_rows > 0) {
     $currentData = $result->fetch_assoc();
-} 
-
-// Fetch the latest forecasted data to display to the user
-$sql = "SELECT * FROM forecast_data ORDER BY date ASC LIMIT 7"; // Fetch the last 7 days of forecast
-$forecastResult = $link->query($sql);
-
-// Initialize latestForecastData as an empty array
-$latestForecastData = [];
-
-if ($forecastResult) { // Check if the query was successful
-    if ($forecastResult->num_rows > 0) {
-        $latestForecastData = $forecastResult->fetch_all(MYSQLI_ASSOC); // Fetch all rows
-    } else {
-        // No rows returned
-        echo 'No forecast data available.';
-    }
-} else {
-    // Handle SQL query error
-    echo 'Error fetching forecast data: ' . htmlspecialchars($link->error);
 }
 
-// Close the database connection
+// Fetch forecasted data by running the Python script (you can adjust the path as needed)
+$forecastDataRaw = shell_exec('C:/Python312/python.exe /xampp/htdocs/heatindexmonitoring-main/forecast.py 2>&1');
+
+// Decode the JSON output from the Python script
+$forecastData = json_decode($forecastDataRaw, true);
+
+// Check if JSON decoding was successful
+if (json_last_error() === JSON_ERROR_NONE) {
+    // Use the forecast data to display in the HTML later
+} else {
+    echo "JSON Decode Error: " . json_last_error_msg();
+}
+
 $link->close();
 ?>
 
@@ -215,10 +172,6 @@ $link->close();
             height: 100vh;
             background-color: #f5f5f5;
             flex-wrap: wrap; /* Ensures cards align properly when more are added */
-        }
-
-        h4 {
-            color: #808080;
         }
 
         .back-button {
@@ -324,64 +277,21 @@ $link->close();
         .forecast-bar.extreme-danger {
             background-color: red;  /* Above 54°C (Extreme Danger) */
         } 
-
-        .device-select-container {
-            width: 90%;
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .device-select-label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #343a40;
-        }
-
-        #deviceSelect, 
-        #compareDeviceSelect {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #fff;
-            color: #333;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        #deviceSelect:focus,
-        #compareDeviceSelect:focus {
-            border-color: #800000; /* Maroon color on focus */
-            outline: none;
-        }
-
-        /* Optional styles for better appearance */
-        option {
-            padding: 10px; /* Increase padding for options */
-        }
     </style>
 </head>
 <body>
 <div id="monitoring-section" class="data-container">
     <h2>Today's Monitoring</h2>
-    <h4>7-Day Forecast</h4>
     <div id="forecast-container" class="forecast-container">
         <!-- Forecast items will be dynamically inserted here -->
     </div>
-    <h4>Current Heat Index Data</h4>
-    <div class="device-select-container">
-        <label for="deviceSelect" class="device-select-label">Select Device</label>
-        <select id="deviceSelect">
-            <?php foreach ($devices as $device): ?>
-                <option value="<?php echo htmlspecialchars($device['deviceId']); ?>"><?php echo htmlspecialchars($device['deviceName']); ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+    <select id="deviceSelect">
+        <option value="">Select Device</option>
+        <?php foreach ($devices as $device): ?>
+            <option value="<?php echo $device['deviceId']; ?>"><?php echo $device['deviceName']; ?></option>
+        <?php endforeach; ?>
+    </select>
+    <h3>Current Heat Index Data</h3>
     <div class="data-row">
         <div class="data-box">
             <p class="data-title">Temperature:</p>
@@ -410,14 +320,12 @@ $link->close();
 <div id="compare-section" class="data-container" style="display:none;">
     <h2>Compare Heat Index Data</h2>
     
-    <div class="device-select-container">
-        <label for="deviceSelect" class="device-select-label">Select Device to Compare</label>
-        <select id="compareDeviceSelect">
-            <?php foreach ($devices as $device): ?>
-                <option value="<?php echo htmlspecialchars($device['deviceId']); ?>"><?php echo htmlspecialchars($device['deviceName']); ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+    <select id="compareDeviceSelect">
+        <option value="">Select Device to Compare</option>
+        <?php foreach ($devices as $device): ?>
+            <option value="<?php echo $device['deviceId']; ?>"><?php echo $device['deviceName']; ?></option>
+        <?php endforeach; ?>
+    </select>
     
     <div class="compare-container">
         <!-- Left Side for Visual Crossing Data -->
@@ -523,8 +431,7 @@ $link->close();
         const forecastContainer = document.getElementById('forecast-container');
         forecastContainer.innerHTML = ''; // Clear previous forecast
 
-        // Check if forecastData is not an array or is empty
-        if (!Array.isArray(forecastData) || forecastData.length === 0) {
+        if (!forecastData || forecastData.length === 0) {
             const noDataMessage = document.createElement('div');
             noDataMessage.className = 'no-forecast-message';
             noDataMessage.innerText = 'No forecast data available';
@@ -532,7 +439,6 @@ $link->close();
             return;
         }
 
-        // Loop through the forecast data and display it
         forecastData.forEach(day => {
             const formattedDate = new Date(day.date).toLocaleDateString();
             const temp = parseFloat(day.temperature_forecast).toFixed(2);
@@ -565,12 +471,6 @@ $link->close();
         });
     }
 
-    // Fetch forecast data from PHP and display it when the page loads
-    document.addEventListener("DOMContentLoaded", function() {
-        const forecastData = <?php echo json_encode($latestForecastData); ?>; // Ensure this is the correct PHP variable
-        displayForecastData(forecastData);
-    });
-    
     // Helper function to format the date into a more readable format
     function formatDate(dateString) {
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -651,6 +551,14 @@ $link->close();
         const HI = c1 + (c2 * T) + (c3 * R) + (c4 * T * R) + (c5 * Math.pow(T, 2)) + (c6 * Math.pow(R, 2)) +
                     (c7 * Math.pow(T, 2) * R) + (c8 * T * Math.pow(R, 2)) + (c9 * Math.pow(T, 2) * Math.pow(R, 2));
         return HI;
+    }
+
+    // Fetch forecast data from PHP and display on the page
+    const forecastData = <?php echo json_encode($forecastData); ?>;
+    if (forecastData) {
+        displayForecastData(forecastData);
+    } else {
+        console.error("No forecast data available");
     }
 
     // Event listener for weekly data button (reused for displaying data)

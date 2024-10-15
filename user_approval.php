@@ -318,6 +318,7 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
             </tbody>
         </table>
     </div>
+    <?php include 'footer.php'; ?>
 </body>
 </html>
 

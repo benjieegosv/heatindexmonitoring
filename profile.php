@@ -372,6 +372,6 @@ $profilePicSrc = !empty($userData['profilePic']) ? 'data:image/png;base64,' . ba
         cropper.destroy();
     }
 </script>
-
+<?php include 'footer.php'; ?>
 </body>
 </html>

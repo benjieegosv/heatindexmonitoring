@@ -1,12 +1,13 @@
 <?php
+date_default_timezone_set('Asia/Manila'); 
 session_start();
 include 'db_conn.php'; // Include database connection
 
 if (isset($_GET['token'])) {
     $token = $_GET['token'];
 
-    // Check if the token is valid and not expired
-    $query = "SELECT accNum, expires_at FROM password_resets WHERE token = ? AND expires_at >= NOW()";
+    // Check if token is valid and not expired
+    $query = "SELECT accNum, expires_at FROM password_resets_guest WHERE token = ? AND expires_at >= NOW()";
     $stmt = $link->prepare($query);
     $stmt->bind_param("s", $token);
     $stmt->execute();
@@ -14,20 +15,18 @@ if (isset($_GET['token'])) {
     $resetData = $result->fetch_assoc();
 
     if ($resetData) {
-        // Debug expiration time
-        $currentTime = date("Y-m-d H:i:s");
-        echo "Token expiration time: " . $resetData['expires_at'] . "<br>";
-
-        // Proceed with password reset
+        // Token is valid; show form to reset password
         if (isset($_POST['new_password'])) {
             $newPassword = password_hash($_POST['new_password'], PASSWORD_BCRYPT);
-            $query = "UPDATE staff_account SET password = ? WHERE accNum = ?";
+
+            // Update the user's password in the database
+            $query = "UPDATE guest_account SET password = ? WHERE accNum = ?";
             $stmt = $link->prepare($query);
             $stmt->bind_param("si", $newPassword, $resetData['accNum']);
             $stmt->execute();
 
             // Delete the token after successful password reset
-            $query = "DELETE FROM password_resets WHERE token = ?";
+            $query = "DELETE FROM password_resets_guest WHERE token = ?";
             $stmt = $link->prepare($query);
             $stmt->bind_param("s", $token);
             $stmt->execute();
@@ -91,23 +90,6 @@ if (isset($_GET['token'])) {
         background-color: black;
         color: white;
         }
-               
-        .back-button {
-        display: inline-block;
-        padding: 7px 10px;
-        background-color: #007bff; /* Bootstrap primary color */
-        color: white;
-        text-align: center;
-        text-decoration: none;
-        border-radius: 5px;
-        transition: background-color 0.3s, transform 0.2s;
-        margin-top: 10px;
-        }
-
-        .back-button:hover {
-        background-color: #0056b3; /* Darker shade on hover */
-        transform: scale(1.05);
-        }
         </style>
 </head>
 <body>
@@ -115,7 +97,6 @@ if (isset($_GET['token'])) {
     <form action="" method="POST">
         <input type="password" name="new_password" placeholder="Enter your new password" required><br>
         <input type="submit" value="Reset Password">
-        <a href="login.php" class="back-button">Back to Login</a>
     </form>
 </body>
 </html>
