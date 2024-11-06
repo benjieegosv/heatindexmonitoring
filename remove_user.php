@@ -200,6 +200,67 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
             font-size: 16px;
             color: #6c757d;
         }
+
+        @media (max-width: 768px) {
+        table, thead, tbody, th, td, tr {
+            display: block;
+            width: 100%;
+        }
+
+        /* Hide table headers on mobile */
+        table thead {
+            display: none;
+        }
+
+        /* Each row becomes a centered card */
+        table tbody tr {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center the content */
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #fff;
+            text-align: center; /* Center text in each card */
+        }
+
+        /* Style each cell within the card */
+        table tbody td {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 8px 0;
+            font-size: 14px;
+            width: 100%;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Remove border from the last cell in each card */
+        table tbody td:last-child {
+            border-bottom: none;
+        }
+
+        /* Label each cell for clarity */
+        table tbody td::before {
+            content: attr(data-label);
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        /* Full-width action buttons */
+        table tbody td .btn {
+            width: 100%; /* Set buttons to full width */
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 14px;
+            text-align: center;
+        }
+    }
+
     </style>
 </head>
 <body>
@@ -220,7 +281,7 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
             </form>
         </div>
 
-         <div class="table-container">
+        <div class="table-container">
             <table>
                 <thead>
                     <tr>
@@ -253,9 +314,14 @@ $feedbackMessage = isset($_GET['message']) ? $_GET['message'] : '';
                 </tbody>
             </table>
         </div>
+
     </div>
 
-    <?php include 'footer.php'; ?>
+    <footer>
+        <?php
+        include('footer.php');
+        ?>
+    </footer>
 </body>
 </html>
 

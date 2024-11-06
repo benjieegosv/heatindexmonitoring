@@ -364,6 +364,18 @@ $link->close();
         option {
             padding: 10px; /* Increase padding for options */
         }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+                height: auto; /* Allow container height to adjust */
+            }
+
+            .card {
+                width: 90%;
+                margin: 10px 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -402,7 +414,6 @@ $link->close();
     </div>
     <p id="currentUpdateTime" class="small-text">Last updated: Loading...</p>
     <div class="button-group">
-        <button id="weekly-data">Weekly Data</button>
         <button id="compare-data">Compare</button>
     </div>
 </div>
@@ -459,7 +470,7 @@ $link->close();
 </div>
 
 <script>
-    const ws = new WebSocket(`ws://192.168.254.102:8080`); // Update with your domain and WebSocket port
+    const ws = new WebSocket(`ws://192.168.247.185:8080`); // Update with your domain and WebSocket port
 
     ws.onmessage = function(event) {
         const data = JSON.parse(event.data);
@@ -656,13 +667,6 @@ $link->close();
     // Event listener for weekly data button (reused for displaying data)
     document.getElementById('weekly-data').addEventListener('click', function() {
         displayForecastData(forecastData);
-    });
-
-    // Event listener to show the comparison section
-    document.getElementById('compare-data').addEventListener('click', function() {
-        document.getElementById('monitoring-section').style.display = 'none';
-        document.getElementById('compare-section').style.display = 'block';
-        fetchLatestVisualData();  // Fetch latest data when comparison is shown
     });
 
     // Event listener to return to the monitoring section

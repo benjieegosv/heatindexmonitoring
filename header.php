@@ -43,6 +43,8 @@ if (!empty($_SESSION['adminAccNum'])) {
 } else {
     $firstName = "No user logged in"; // Handle case where no admin is logged in
 }
+
+$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -69,16 +71,16 @@ if (!empty($_SESSION['adminAccNum'])) {
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item active">
+            <li class="nav-item <?php if($current_page == 'home.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="home.php" id="home-nav">Home</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item <?php if($current_page == 'monitoring.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="monitoring.php" id="monitoring-nav">Monitoring</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item <?php if($current_page == 'reports.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="reports.php" id="reports-nav">Reports</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item <?php if($current_page == 'manage_accounts.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="manage_accounts.php" id="manage-account-nav">Manage Accounts</a>
             </li>
         </ul>
@@ -94,8 +96,8 @@ if (!empty($_SESSION['adminAccNum'])) {
                             <i class="glyphicon glyphicon-user"></i> Profile
                         </a>
                     <?php endif; ?>
-                    <a class="dropdown-item" href="edit_account.php">
-                        <i class="glyphicon glyphicon-cog"></i> Settings
+                    <a class="dropdown-item" href="change_password.php">
+                        <i class="glyphicon glyphicon-cog"></i> Change Password
                     </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="login.php">
@@ -107,3 +109,8 @@ if (!empty($_SESSION['adminAccNum'])) {
     </div>
 </nav>
 </header>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

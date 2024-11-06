@@ -1078,22 +1078,27 @@ if ($isDownload) {
             </table>
 
             <!-- Max and Min Heat Index Day Containers -->
-        <div class="heat-index-forecast-container">
-            <div class="heat-index-box max-heat-index">
-                <span class="label">Max Heat Index:</span>
-                <span class="value"><?= htmlspecialchars($maxHeatIndexValue) ?>°C</span>
-                <span class="date">on <?= htmlspecialchars($maxHeatIndexDay) ?></span>
+            <div class="heat-index-forecast-container">
+                <div class="heat-index-box max-heat-index">
+                    <span class="label">Max Heat Index:</span>
+                    <span class="value"><?= htmlspecialchars($maxHeatIndexValue) ?>°C</span>
+                    <span class="date">on <?= htmlspecialchars($maxHeatIndexDay) ?></span>
+                </div>
+                <div class="heat-index-box min-heat-index">
+                    <span class="label">Min Heat Index:</span>
+                    <span class="value"><?= htmlspecialchars($minHeatIndexValue) ?>°C</span>
+                    <span class="date">on <?= htmlspecialchars($minHeatIndexDay) ?></span>
+                </div>
             </div>
-            <div class="heat-index-box min-heat-index">
-                <span class="label">Min Heat Index:</span>
-                <span class="value"><?= htmlspecialchars($minHeatIndexValue) ?>°C</span>
-                <span class="date">on <?= htmlspecialchars($minHeatIndexDay) ?></span>
-            </div>
-        </div>
-
 
             <div class="chart-container">
                 <canvas id="forecastChart"></canvas>
+            </div>
+
+            <!-- Display the saved plot image -->
+            <div class="plot-container">
+                <h4>Regression Analysis</h4>
+                <img src="Images/heat_index_plot.png" alt="Temperature vs Heat Index Plot" style="max-width: 100%; height: auto;">
             </div>
 
             <div class="download-container">

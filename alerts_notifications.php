@@ -174,6 +174,7 @@ while ($row = $devicesResult->fetch_assoc()) {
             .data-section {
                 flex-direction: column;
                 align-items: center;
+                height: auto; 
             }
 
             .data-box {
@@ -248,6 +249,37 @@ while ($row = $devicesResult->fetch_assoc()) {
             background-color: #4caf50;
             color: white;
         }
+
+        /* Forecast Section */
+        #forecast-section {
+            margin-top: 30px;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .date-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .forecast-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .forecast-table th, .forecast-table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .forecast-table th {
+            background-color: #f0f0f0;
+        }
     </style>
     <script>
         let ws;
@@ -265,7 +297,7 @@ while ($row = $devicesResult->fetch_assoc()) {
 
             if (deviceId) {
                 // Establish a new WebSocket connection
-                ws = new WebSocket('ws://192.168.254.102:8080');
+                ws = new WebSocket('ws://192.168.247.185:8080');
 
                 ws.onopen = function() {
                     console.log('WebSocket connection opened');
@@ -333,26 +365,25 @@ while ($row = $devicesResult->fetch_assoc()) {
         }
 
         function fetchSafetyPrecautions(heatIndex, temperature, humidity) {
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', 'get_safety_precautions.php?heatIndex=' + heatIndex + '&temperature=' + temperature + '&humidity=' + humidity, true);
-        xhr.onload = function () {
-            if (xhr.status === 200) {
-                let precautions = JSON.parse(xhr.responseText);
-                console.log('Received safety precautions:', precautions);  // Log the response
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', 'get_safety_precautions.php?heatIndex=' + heatIndex + '&temperature=' + temperature + '&humidity=' + humidity, true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    let precautions = JSON.parse(xhr.responseText);
+                    console.log('Received safety precautions:', precautions);  // Log the response
 
-                document.getElementById('classification').textContent = precautions.classification;
-                document.getElementById('description').textContent = precautions.description;
-                document.getElementById('safetyPrecautions').textContent = precautions.safety_precautions;
-            } else {
-                console.error('Error fetching safety precautions.');
-            }
-        };
-        xhr.onerror = function() {
-            console.error('Request failed');
-        };
-        xhr.send();
-    }
-
+                    document.getElementById('classification').textContent = precautions.classification;
+                    document.getElementById('description').textContent = precautions.description;
+                    document.getElementById('safetyPrecautions').textContent = precautions.safety_precautions;
+                } else {
+                    console.error('Error fetching safety precautions.');
+                }
+            };
+            xhr.onerror = function() {
+                console.error('Request failed');
+            };
+            xhr.send();
+        }
 
         // Send cancel class request
         function sendCancelClass() {
@@ -362,8 +393,8 @@ while ($row = $devicesResult->fetch_assoc()) {
             const classification = document.getElementById('classification').textContent;
             const description = document.getElementById('description').textContent;
             const precautions = document.getElementById('safetyPrecautions').textContent;
-            const suggestion = document.getElementById('suggestionText').value;
             const timestamp = document.getElementById('currentUpdateTime').textContent; // Getting the timestamp
+            const deviceId = selectedDeviceId; // Get the selected device ID
 
             const formData = new FormData();
             formData.append('heatIndex', heatIndex);
@@ -372,8 +403,8 @@ while ($row = $devicesResult->fetch_assoc()) {
             formData.append('classification', classification);
             formData.append('description', description);
             formData.append('precautions', precautions);
-            formData.append('suggestion', suggestion);
             formData.append('timestamp', timestamp); // Include timestamp
+            formData.append('deviceId', deviceId); // Include the selected device ID
 
             fetch('send_cancel_class.php', {
                 method: 'POST',
@@ -396,8 +427,8 @@ while ($row = $devicesResult->fetch_assoc()) {
             const classification = document.getElementById('classification').textContent;
             const description = document.getElementById('description').textContent;
             const precautions = document.getElementById('safetyPrecautions').textContent;
-            const suggestion = document.getElementById('suggestionText').value;
             const timestamp = document.getElementById('currentUpdateTime').textContent; // Getting the timestamp
+            const deviceId = selectedDeviceId; // Get the selected device ID
 
             const formData = new FormData();
             formData.append('heatIndex', heatIndex);
@@ -406,8 +437,8 @@ while ($row = $devicesResult->fetch_assoc()) {
             formData.append('classification', classification);
             formData.append('description', description);
             formData.append('precautions', precautions);
-            formData.append('suggestion', suggestion);
             formData.append('timestamp', timestamp); // Include timestamp
+            formData.append('deviceId', deviceId); // Include the selected device ID
 
             fetch('send_suggestion.php', {
                 method: 'POST',
@@ -431,6 +462,102 @@ while ($row = $devicesResult->fetch_assoc()) {
             document.getElementById('classification').textContent = "Loading...";
             document.getElementById('description').textContent = "Loading...";
             document.getElementById('safetyPrecautions').textContent = "Loading...";
+        }
+
+        // Fetch and display forecast data
+        function fetchForecast() {
+            const date = document.getElementById('forecastDate').value; // Get the selected date
+            fetch(`fetch_forecast.php?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayForecast(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching forecast data:', error);
+                });
+        }
+
+        function displayForecast(data) {
+            const forecastTableBody = document.getElementById('forecastTableBody');
+            forecastTableBody.innerHTML = ''; // Clear previous data
+
+            if (data && data.length > 0) {
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.date}</td>
+                        <td>${item.temperature_forecast}°C</td>
+                        <td>${item.humidity_forecast}%</td>
+                        <td>${item.heat_index_forecast}°C</td>
+                    `;
+                    forecastTableBody.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4">No forecast data available for the selected date.</td>`;
+                forecastTableBody.appendChild(row);
+            }
+        }
+
+         // Cancel forecast class request
+               // Send cancel class request from forecast
+               function cancelForecastClass() {
+            const date = document.getElementById('forecastDate').value; // Get the selected date
+
+            // Check if a date is selected
+            if (!date) {
+                alert("Please select a date for the forecast.");
+                return;
+            }
+
+            // Prompt the user for additional information
+            const additionalInfo = prompt("Please provide any additional information for the cancellation:");
+
+            // If the user cancels the prompt, do nothing
+            if (additionalInfo === null) {
+                return; // Exit the function
+            }
+
+            const formData = new FormData();
+            formData.append('date', date);
+            formData.append('suggestion', additionalInfo); // Use the additional info from the prompt
+
+            // Send a request to the server to cancel the forecast
+            fetch('send_cancel_class_forecast.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(result => {
+                alert(result); // Display the response from the server
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Reset the display to the default state
+        function resetDisplay() {
+            document.getElementById('currentHeatIndex').textContent = "Loading...";
+            document.getElementById('currentTemperature').textContent = "Loading...";
+            document.getElementById('currentHumidity').textContent = "Loading...";
+            document.getElementById('currentUpdateTime').textContent = "Last updated: Loading...";
+            document.getElementById('classification').textContent = "Loading...";
+            document.getElementById('description').textContent = "Loading...";
+            document.getElementById('safetyPrecautions').textContent = "Loading...";
+        }
+
+        // Fetch and display forecast data
+        function fetchForecast() {
+            const date = document.getElementById('forecastDate').value; // Get the selected date
+            fetch(`fetch_forecast.php?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayForecast(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching forecast data:', error);
+                });
         }
     </script>
 </head>
@@ -470,13 +597,33 @@ while ($row = $devicesResult->fetch_assoc()) {
         <p>Description: <span id="description">Loading...</span></p>
         <p>Precautions: <span id="safetyPrecautions">Loading...</span></p>
     </div>
-    <div class="suggestion-box">
-        <h3>Additional Suggestions:</h3>
-        <textarea id="suggestionText" placeholder="Enter additional info or suggestions..."></textarea>
-    </div>
+    
     <div class="button-group">
         <button class="cancel-class-button" onclick="sendCancelClass()">Cancel Class</button>
         <button class="send-suggestion-button" onclick="sendSuggestions()">Send Suggestions</button>
+    </div>
+
+    <div id="forecast-section">
+        <h2>Forecast Data</h2>
+        <div class="date-selector">
+            <label for="forecastDate">Select Date for Forecast:</label>
+            <input type="date" id="forecastDate" />
+            <button onclick="fetchForecast()">Get Forecast</button>
+            <button class="cancel-class-button" onclick="cancelForecastClass()">Cancel Class from Forecast</button>
+        </div>
+        <table class="forecast-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Temperature Forecast</th>
+                    <th>Humidity Forecast</th>
+                    <th>Heat Index Forecast</th>
+                </tr>
+            </thead>
+            <tbody id="forecastTableBody">
+                <!-- Forecast data will be dynamically inserted here -->
+            </tbody>
+        </table>
     </div>
 </div>
 <?php include 'footer.php'; ?>

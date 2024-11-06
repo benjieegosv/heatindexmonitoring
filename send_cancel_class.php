@@ -13,9 +13,26 @@ $humidity = $_POST['humidity'] ?? '';
 $classification = $_POST['classification'] ?? '';
 $description = $_POST['description'] ?? '';
 $precautions = $_POST['precautions'] ?? '';
-$suggestion = $_POST['suggestion'] ?? '';
+$deviceId = $_POST['deviceId'] ?? ''; // Get the selected device ID
 
-// Fetch all emails from guess_Account table
+// Fetch device location based on deviceId
+$deviceLocation = '';
+if (!empty($deviceId)) {
+    $sql = "SELECT location FROM device_info WHERE deviceId = ?";
+    $stmt = $link->prepare($sql);
+    $stmt->bind_param("i", $deviceId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $deviceLocation = $result->fetch_assoc()['location'];
+    } else {
+        echo json_encode(['message' => 'Device not found.']);
+        exit();
+    }
+}
+
+// Fetch all emails from guest_account table
 $sql = "SELECT email FROM guest_account";
 $result = $link->query($sql);
 
@@ -51,7 +68,7 @@ if ($result->num_rows > 0) {
             <p><strong>Classification:</strong> $classification</p>
             <p><strong>Description:</strong> $description</p>
             <p><strong>Precautions:</strong> $precautions</p>
-            <p><strong>Additional Information:</strong> $suggestion</p>
+            <p><strong>Device Location:</strong> $deviceLocation</p> <!-- Added location -->
         ";
 
         // Attempt to send the email
@@ -65,6 +82,6 @@ if ($result->num_rows > 0) {
         $mail->clearAddresses();
     }
 } else {
-    echo "No users found in the guess_account table.";
+    echo "No users found in the guest_account table.";
 }
-
+?>

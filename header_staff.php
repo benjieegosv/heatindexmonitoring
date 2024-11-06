@@ -40,6 +40,7 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     header("Location: login.php");
     exit;
 }
+$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -54,7 +55,6 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     <link href="https://fonts.googleapis.com/css?family=Quicksand&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-</head>
 <body>
 <header>
 <nav class="navbar sticky-top navbar-expand-sm navbar-dark bg-maroon">
@@ -66,16 +66,16 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item active">
+            <li class="nav-item <?php if($current_page == 'home.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="home.php" id="home-nav">Home</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item <?php if($current_page == 'monitoring.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="monitoring.php" id="monitoring-nav">Monitoring</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item <?php if($current_page == 'reports.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="reports.php" id="reports-nav">Reports</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item <?php if($current_page == 'alert_notifications.php') { echo 'active'; } ?>">
                 <a class="nav-link" href="alerts_notifications.php" id="alerts-notifications-nav">Alerts & Notifications</a>
             </li>
         </ul>
@@ -89,8 +89,8 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
                     <a class="dropdown-item" href="profile.php?id=<?php echo (int)$accNum; ?>">
                         <i class="glyphicon glyphicon-user"></i> Profile
                     </a>                    
-                    <a class="dropdown-item" href="edit_account.php">
-                        <i class="glyphicon glyphicon-cog"></i> Settings
+                    <a class="dropdown-item" href="change_password.php">
+                        <i class="glyphicon glyphicon-cog"></i> Change Password
                     </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="login.php">
@@ -102,5 +102,8 @@ if (isset($_SESSION['accNum']) && !empty($_SESSION['accNum'])) {
     </div>
 </nav>
 </header>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

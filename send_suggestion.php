@@ -1,13 +1,11 @@
 <?php
 // Autoload PHPMailer dependencies (if using Composer)
 require 'vendor/autoload.php';
-
-// Manually include PHPMailer files (if not using Composer)
 require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/PHPMailer.php';
 require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/SMTP.php';
 require 'C:/xampp/htdocs/heatindexmonitoring-main/PHPMailer/src/Exception.php';
 
-include 'db_conn.php';  // Make sure this file contains your database connection setup
+include 'db_conn.php';  // Ensure this file contains your database connection setup
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -19,9 +17,26 @@ $humidity = $_POST['humidity'] ?? '';
 $classification = $_POST['classification'] ?? '';
 $description = $_POST['description'] ?? '';
 $precautions = $_POST['precautions'] ?? '';
-$suggestion = $_POST['suggestion'] ?? '';
+$deviceId = $_POST['deviceId'] ?? ''; // Get the device ID
 
-// Fetch all emails from guess_account table
+// Fetch device location based on deviceId
+$deviceLocation = '';
+if (!empty($deviceId)) {
+    $sql = "SELECT location FROM device_info WHERE deviceId = ?";
+    $stmt = $link->prepare($sql);
+    $stmt->bind_param("i", $deviceId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $deviceLocation = $result->fetch_assoc()['location'];
+    } else {
+        echo json_encode(['message' => 'Device not found.']);
+        exit();
+    }
+}
+
+// Fetch all emails from guest_account table
 $sql = "SELECT email FROM guest_account";
 $result = $link->query($sql);
 
@@ -57,7 +72,7 @@ if ($result->num_rows > 0) {
             <p><strong>Classification:</strong> $classification</p>
             <p><strong>Description:</strong> $description</p>
             <p><strong>Precautions:</strong> $precautions</p>
-            <p><strong>Suggestion:</strong> $suggestion</p>
+            <p><strong>Device Location:</strong> $deviceLocation</p> <!-- Added location -->
         ";
 
         // Attempt to send the email
